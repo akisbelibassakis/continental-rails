@@ -10,12 +10,12 @@ const editions = ['.'];
 const PTS = { 1: 1, 2: 2, 3: 4, 4: 7, 5: 10, 6: 15, 7: 18, 8: 21 };
 let failures = 0;
 
-function runGame(src, nb) {
+function runGame(src, nb, map) {
   return new Promise(resolve => {
     const errors = [];
     let finished = false;
     const ctx = {
-      window: { __AUTO: true, __NB: nb },
+      window: { __AUTO: true, __NB: nb, __MAP: map },
       // Bots only ever wait 0 ms in AUTO mode, so run callbacks immediately
       // instead of waiting for the ~15 ms Windows timer tick.
       document: {}, setTimeout: f => setImmediate(f), clearTimeout: () => {},
@@ -36,7 +36,7 @@ function runGame(src, nb) {
 
 function check(G, nb) {
   const bad = [];
-  const n = nb + 1, startTrains = { 2: 30, 3: 27, 4: 24 }[n];
+  const n = nb + 1, startTrains = G.startTrains;
   if (!G.over) bad.push('game did not finish');
   let cards = G.deck.length + G.disc.length + G.face.length;
   G.players.forEach((p, i) => {
@@ -54,22 +54,27 @@ function check(G, nb) {
   const st = G.players.flatMap(p => p.stations);
   if (new Set(st).size !== st.length) bad.push('two stations in one city');
   if (G.face.length > 5) bad.push('more than 5 face-up cards');
+  // double routes: with 2-3 players only one track may be owned; nobody may own both
+  for (const r of G.routes) if (r.pair > r.id) {
+    const o = G.routes[r.pair];
+    if (r.owner >= 0 && o.owner >= 0 && (n <= 3 || r.owner === o.owner)) bad.push(`double route ${r.a}-${r.b} owned by ${r.owner} and ${o.owner}`);
+  }
   return bad;
 }
 
 (async () => {
-  for (const ed of editions) {
+  for (const ed of editions) for (const map of ['classic', 'full']) {
     const html = fs.readFileSync(path.join(__dirname, '..', ed, 'index.html'), 'utf8');
     const src = html.match(/<script>([\s\S]*?)<\/script>/)[1];
-    for (const nb of [1, 2, 3]) {
+    for (const nb of [1, 2, 3, 4]) {
       let ok = 0, bad = 0, turnsLog = 0;
       for (let g = 0; g < N; g++) {
-        const { G, errors } = await runGame(src, nb);
+        const { G, errors } = await runGame(src, nb, map);
         const issues = errors.concat(G ? check(G, nb) : ['no game state']);
-        if (issues.length) { bad++; failures++; if (bad <= 3) console.log(`  [${ed === '.' ? 'game' : ed} ${nb + 1}p game ${g}] ${issues.join('; ')}`); }
+        if (issues.length) { bad++; failures++; if (bad <= 3) console.log(`  [${map} ${nb + 1}p game ${g}] ${issues.join('; ')}`); }
         else { ok++; turnsLog += G.log.length; }
       }
-      console.log(`${(ed === '.' ? 'game' : ed).padEnd(6)} ${nb + 1} players: ${ok}/${N} games clean${bad ? `, ${bad} with problems` : ''}`);
+      console.log(`${map.padEnd(8)} ${nb + 1} players: ${ok}/${N} games clean${bad ? `, ${bad} with problems` : ''}`);
     }
   }
   console.log(failures ? `FAILED: ${failures} game(s) with problems` : 'ALL CLEAN');
