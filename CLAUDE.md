@@ -21,7 +21,7 @@ name, map layout, routes, colours and artwork are all original.
 ## Layout
 | Path | What |
 |---|---|
-| `index.html` | The game. Upright: ☰ menu + score strip, map (Zoom: fill / all / close, drag to pan), news ticker, tray with face-up cards, hand and buttons. Sideways: map left, side panel right with the same parts plus the ticket list. Light and dark mode. |
+| `index.html` | The game. Upright: ☰ menu + score strip, map (drag to pan, pinch or Ctrl+wheel to zoom the map only, from whole map to 2.5× fill; Zoom button presets fill / all / close), news ticker, tray with face-up cards, hand and buttons. Sideways: map left, side panel right with the same parts plus the ticket list. Light and dark mode. |
 | `manifest.webmanifest`, `sw.js` | Installable app (fullscreen, any orientation) and network-first service worker, so updates appear automatically |
 | `phone/`, `pc/` | Old addresses: `index.html` redirects to the root; `sw.js` kept for already-installed copies |
 | `icon-192.png`, `icon-512.png` | App icons (drawn by `test/make-icons.ps1`) |
@@ -34,8 +34,7 @@ Hosted on GitHub Pages from `main`, root: https://akisbelibassakis.github.io/con
 The repo was started (2026-11-27) from the two single-file versions that existed
 locally. Compared with the later chat version, the game does **not** yet have: the full
 47-city map, double routes, 7- and 8-train routes (scoring 18/21),
-long tickets, pinch/wheel zoom with + / − / fit buttons, or draggable/minimisable
-floating windows. If the newer files turn up, fold their features into the single `index.html` (e.g. a map choice on the start screen).
+long tickets, or minimisable floating windows. If the newer files turn up, fold their features into the single `index.html` (e.g. a map choice on the start screen).
 
 ## How the game code works
 - The background map (`LANDP` coastline, `BORD` borders) is Natural Earth 1:50m data
@@ -61,7 +60,9 @@ floating windows. If the newer files turn up, fold their features into the singl
   Speed up option. They build stations only when a ticket is blocked.
 - UI: tutorial, Hint button, final-round pop-up, news ticker (rivals' moves, Final round
   tag), ☰ menu with How to play / Game log / Full screen (hidden when installed) / New game.
-  While you choose tickets the map stays scrollable and jumps to the tapped ticket.
+  While you choose tickets the map stays draggable and jumps to the tapped ticket; the
+  window itself can be dragged out of the way. The page itself never zooms (viewport
+  user-scalable=no); map gestures are handled with pointer events (`touch-action: none`).
 
 ## Testing
 - `window.__AUTO = true` makes every player a bot and plays a full game with no DOM

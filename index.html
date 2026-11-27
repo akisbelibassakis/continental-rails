@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Continental Rails</title>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#1f3d36">
@@ -39,9 +39,9 @@ h3{font-size:20px;margin-bottom:6px}
 #ticker .tb{flex:none;background:rgba(255,255,255,.1);border:0;border-left:1px solid rgba(241,230,207,.2);color:#f1e6cf;font:700 12px/1 inherit;padding:0 10px;cursor:pointer}
 @media (prefers-reduced-motion:reduce){#ticker .trk.run>span{animation:none}}
 .lnk{background:none;border:0;color:var(--accent);font:inherit;font-weight:700;text-decoration:underline;padding:0;cursor:pointer}
-#mapWrap{flex:1;min-height:0;overflow:auto;background:var(--map);overscroll-behavior:contain}
-#map{width:max-content;min-width:100%}
-#map svg{display:block;width:var(--mw,100%);height:var(--mh,100%)}
+#mapWrap{flex:1;min-height:0;overflow:auto;background:var(--map);overscroll-behavior:contain;touch-action:none;cursor:grab}
+#map{display:flex;align-items:center;justify-content:center;width:max-content;height:max-content}
+#map svg{display:block;flex:none;width:var(--mw,100%);height:var(--mh,100%)}
 #map text{font-size:8.5px;font-weight:700;fill:var(--ink);paint-order:stroke;stroke:var(--land);stroke-width:2.6px;stroke-linejoin:round;pointer-events:none}
 #map [data-r]{cursor:pointer}
 #map .city{pointer-events:none}
@@ -123,9 +123,6 @@ td:first-child,th:first-child{text-align:left}
 #tixPanel .lbl{margin:2px 0 0}
 #tixPanel .tk{padding:8px 10px;margin-top:5px}
 #tixPanel .tk b{font-size:15px}
-/* Upright + Zoom: all: the map area hugs the game area; the ticket list uses the rest */
-#app.fitmap #mapWrap{flex:0 1 auto;height:calc(100vw * 404 / 428)}
-#app.fitmap #tixPanel{display:block;flex:1 1 0}
 /* compact ticket choice, so it covers less of the map */
 .tsel h3{font-size:18px;margin:0 0 2px}
 .tsel p{font-size:13px;margin:2px 0 4px!important}
@@ -187,7 +184,7 @@ const PCOL=['#00a3b4','#8e3fb8','#7a4a2c','#4b5d6b'];
 const BOTS=['Ada','Brunel','Cugnot'];
 const TUT=[
 [null,'Welcome aboard','Connect cities across Europe with your trains. You score for every route you claim and for each secret destination ticket you complete. The highest score wins.'],
-['mapWrap','The map','Each route needs matching cards: one card per segment, in the route’s colour. Grey routes take any single colour. Drag to move around. Zoom switches between filling the screen, the whole map and a close-up.'],
+['mapWrap','The map','Each route needs matching cards: one card per segment, in the route’s colour. Grey routes take any single colour. Drag to move around and pinch to zoom. The Zoom button jumps between filling the screen, the whole map and a close-up.'],
 ['market','Draw cards','On your turn you can take 2 cards, from the 5 face-up cards or blind from the deck. Rainbow Locos are wild, but taking a face-up Loco uses your whole draw.'],
 ['hand','Your hand','Your cards are counted here by colour, just under the face-up cards. Locos can stand in for any colour.'],
 ['mapWrap','Claim a route','Instead of drawing, tap a route and pay for it. You score at once: 1, 2, 4, 7, 10 or 15 points for lengths 1 to 6.'],
@@ -330,7 +327,6 @@ function render(){if(AUTO||!G)return;const mt=myTurn();
  $('market').innerHTML=G.face.map((c,i)=>cardEl(c,`data-f="${i}" ${!mt||G.mode||(c==='L'&&G.draws)?'disabled':''} aria-label="Take ${NAME[c]}"`)).join('')+`<button class="card deck" data-f="d" ${!mt||G.mode||!(G.deck.length+G.disc.length)?'disabled':''} aria-label="Draw from deck">${G.deck.length+G.disc.length}</button>`;
  if(G.pick!=null){const b=$('market').querySelector(`[data-f="${G.pick}"]`);if(b)b.classList.add('pick')}
  const h=me().hand;$('hand').innerHTML=[...CC,'L'].map(c=>`<div class="chip${c==='L'?' loco':''}${h[c]?'':' z'}" style="background:${COL[c]||''};color:${fg(c)}" title="${NAME[c]}">${h[c]}</div>`).join('');
- $('zoomBtn').textContent=ZM==='fill'?'Zoom: fill':ZM==='whole'?'Zoom: all':'Zoom: close';
  $('tixList').innerHTML=me().tickets.map(t=>{const ok=conn(0,t.a,t.b),on=G.hl&&G.hl[0]===t.a&&G.hl[1]===t.b;return`<button class="tk${ok?' ok':''}${on?' on':''}" data-x="${t.a}|${t.b}"><span>${ok?'✓ ':''}${t.a} → ${t.b}</span><b>${t.v}</b></button>`}).join('')||'<p class="muted small">No tickets yet.</p>';
  const t=me().tickets;$('tixBtn').textContent=`Tickets ${t.filter(x=>conn(0,x.a,x.b)).length}/${t.length}`;
  $('stBtn').textContent=G.mode==='station'?'Cancel':`Station (${3-me().stations.length})`;$('stBtn').disabled=!mt||G.draws>0||me().stations.length>=3}
@@ -351,26 +347,34 @@ function ticker(mt){let tag,col='var(--accent)',txt,btn='';
  if(html===ticker.html)return;ticker.html=html;const el=$('ticker');el.innerHTML=html;
  const trk=el.querySelector('.trk'),sp=trk.firstChild;
  if(sp.scrollWidth>trk.clientWidth+2){sp.innerHTML=txt+'<span class="gap">•</span>'+txt+'<span class="gap">•</span>';trk.classList.add('run');trk.style.setProperty('--t',(sp.scrollWidth/2/45).toFixed(1)+'s')}}
-// Map zoom. fill: the map covers the whole map area (drag to see the rest);
-// whole: all of it fits; close: twice fill. MS = screen pixels per map unit.
+// Map zoom. MS = screen pixels per map unit. Presets (Zoom button): fill = the map
+// covers the map area; whole = all of it fits (plain sea bars around it); close =
+// twice fill. Pinching (or Ctrl + wheel) zooms the map only, between whole and 2.5x fill.
 let ZM=null,MS=1;try{ZM=localStorage.getItem('cr-zoom')}catch(e){}
-function sizeMap(){$('app').classList.toggle('fitmap',ZM==='whole'&&!matchMedia('(orientation:landscape)').matches);const w=$('mapWrap'),W=w.clientWidth,H=w.clientHeight;if(!W||!H)return;const a=W/428,b=H/404;let mw=W,mh=H;
- if(ZM==='whole')MS=Math.min(a,b);else{MS=Math.max(a,b)*(ZM==='close'?2:1);mw=428*MS;mh=404*MS}
- w.style.setProperty('--mw',mw+'px');w.style.setProperty('--mh',mh+'px')}
+function mapBounds(){const w=$('mapWrap'),W=w.clientWidth,H=w.clientHeight,a=W/428,b=H/404;return{W,H,min:Math.min(a,b),fill:Math.max(a,b),max:Math.max(a,b)*2.5}}
+function mapOff(B){return[Math.max(0,(B.W-428*MS)/2),Math.max(0,(B.H-404*MS)/2)]}
+function applyMS(B){const w=$('mapWrap'),m=$('map');w.style.setProperty('--mw',428*MS+'px');w.style.setProperty('--mh',404*MS+'px');m.style.minWidth=B.W+'px';m.style.minHeight=B.H+'px'}
+function sizeMap(){const B=mapBounds();if(!B.W||!B.H)return;
+ MS=ZM==='whole'?B.min:ZM==='close'?B.fill*2:ZM==='custom'?Math.min(B.max,Math.max(B.min,MS)):B.fill;applyMS(B)}
 function centerMap(){const w=$('mapWrap');w.scrollLeft=(w.scrollWidth-w.clientWidth)/2;w.scrollTop=(w.scrollHeight-w.clientHeight)/2}
-function setZoom(z){ZM=z;try{localStorage.setItem('cr-zoom',z)}catch(e){}sizeMap();requestAnimationFrame(centerMap);if(G)render()}
+function zoomLabel(){$('zoomBtn').textContent=ZM==='whole'?'Zoom: all':ZM==='close'?'Zoom: close':ZM==='custom'?'Zoom':'Zoom: fill'}
+function setZoom(z){ZM=z;try{localStorage.setItem('cr-zoom',z)}catch(e){}sizeMap();requestAnimationFrame(centerMap);zoomLabel()}
+// Zoom to ms, keeping map point (ax, ay) under the screen point (mx, my).
+function zoomAt(ms,ax,ay,mx,my){const w=$('mapWrap'),B=mapBounds();MS=Math.min(B.max,Math.max(B.min,ms));ZM='custom';applyMS(B);
+ const r=w.getBoundingClientRect(),[ox,oy]=mapOff(B);w.scrollLeft=ax*MS+ox-(mx-r.left);w.scrollTop=ay*MS+oy-(my-r.top);zoomLabel()}
+function mapPoint(mx,my){const w=$('mapWrap'),r=w.getBoundingClientRect(),[ox,oy]=mapOff(mapBounds());return[(w.scrollLeft+mx-r.left-ox)/MS,(w.scrollTop+my-r.top-oy)/MS]}
 // Scroll so the given cities are in view (above the pop-up window when it covers the map).
-function focusCities(ns){if(!ns||ZM==='whole')return;const w=$('mapWrap'),r=w.getBoundingClientRect(),xs=ns.map(n=>CITIES[n][0]),ys=ns.map(n=>CITIES[n][1]);
+function focusCities(ns){if(!ns)return;const w=$('mapWrap'),B=mapBounds(),[ox,oy]=mapOff(B),r=w.getBoundingClientRect(),xs=ns.map(n=>CITIES[n][0]),ys=ns.map(n=>CITIES[n][1]);
  const sh=$('sheet'),top=sh.classList.contains('open')?sh.getBoundingClientRect().top:r.bottom,visH=Math.max(120,Math.min(r.bottom,top)-r.top);
  const cx=(Math.min(...xs)+Math.max(...xs))/2,cy=(Math.min(...ys)+Math.max(...ys))/2;
- w.scrollTo({left:(cx+14)*MS-w.clientWidth/2,top:(cy+8)*MS-visH/2,behavior:'smooth'})}
+ w.scrollTo({left:(cx+14)*MS+ox-w.clientWidth/2,top:(cy+8)*MS+oy-visH/2,behavior:'smooth'})}
 function chooseTickets(list,min,done){const pick=new Set(list.map((_,i)=>i));
  const draw=()=>sheet(`<div class="tsel"><h3>Choose destination tickets</h3><p class="muted">Keep at least ${min}. Unfinished ones count against you. Tap one to find it on the map. Drag the bar on top to move this window.</p>${list.map((t,i)=>`<button class="tk${pick.has(i)?' on':''}" data-a="t" data-i="${i}"><span>${pick.has(i)?'☑':'☐'} ${t.a} → ${t.b}</span><b>${t.v}</b></button>`).join('')}<button class="btn pri wide" data-a="ok" ${pick.size<min?'disabled':''}>Keep ${pick.size} ticket${pick.size===1?'':'s'}</button></div>`,
   (a,el)=>{if(a==='t'){const i=+el.dataset.i;pick.has(i)?pick.delete(i):pick.add(i);G.hl=[list[i].a,list[i].b];render();draw();focusCities(G.hl)}
    else if(a==='ok'&&pick.size>=min){closeSheet();const keep=list.filter((_,i)=>pick.has(i));me().tickets.push(...keep);G.tdeck.push(...list.filter((_,i)=>!pick.has(i)));G.hl=null;done(keep)}},null,true,true);draw()}
 function askStart(){G.busy=true;render();chooseTickets(me().start,2,()=>{G.busy=false;log('You kept your tickets. Your move!');render()})}
 function showStart(){closeTut();$('start').style.display='flex'}
-function begin(t){$('start').style.display='none';newGame(NB);ticker.html=null;setZoom(ZM||(innerWidth>=1000&&innerHeight>=700?'whole':'fill'));if(ZM!=='whole'&&!t)setTimeout(()=>toast('Drag the map to see all of Europe.'),1200);if(t)tutorial(askStart);else askStart()}
+function begin(t){$('start').style.display='none';newGame(NB);ticker.html=null;setZoom(ZM||(innerWidth>=1000&&innerHeight>=700?'whole':'fill'));if(ZM!=='whole'&&!t)setTimeout(()=>toast('Drag to move the map, pinch to zoom.'),1200);if(t)tutorial(askStart);else askStart()}
 
 function onRoute(id){const r=G.routes[id],p=me();G.sel=id;render();
  let h=`<h3>${r.a} – ${r.b}</h3><p class="muted">${r.len} × ${r.c==='X'?'any one colour':NAME[r.c]}, worth ${PTS[r.len]} point${PTS[r.len]>1?'s':''}.${r.t?' Tunnel.':''}${r.f?` Ferry: needs ${r.f} Loco${r.f>1?'s':''}.`:''}</p>`;
@@ -438,11 +442,26 @@ if(!AUTO){
   if((b.dataset.f!=='d'&&c==='L')||G.draws>=2||!(G.deck.length+G.disc.length||G.face.some(x=>x!=='L'))){log(`You took ${G.draws} card${G.draws>1?'s':''}.`);endTurn()}else render()};
  $('ticker').onclick=e=>{if(!G)return;if(e.target.closest('[data-a="cancelSt"]')){G.mode=null;return render()}if(e.target.closest('[data-a="fast"]')){FAST=!FAST;return render()}showLog()};
  $('tixList').onclick=e=>{const b=e.target.closest('[data-x]');if(!b||!G)return;const x=b.dataset.x.split('|');G.hl=G.hl&&G.hl[0]===x[0]&&G.hl[1]===x[1]?null:x;render();focusCities(G.hl)};
- if(window.ResizeObserver)new ResizeObserver(()=>{if(G){sizeMap();centerMap()}}).observe($('mapWrap'));
+ if(window.ResizeObserver)new ResizeObserver(()=>{if(G){sizeMap();if(ZM!=='custom')centerMap()}}).observe($('mapWrap'));
  $('tixBtn').onclick=()=>{if(G&&!G.busy)showTickets()};
  $('hintBtn').onclick=showHint;
  $('stBtn').onclick=()=>{if(!myTurn())return;G.mode=G.mode==='station'?null:'station';render()};
  $('zoomBtn').onclick=()=>setZoom(ZM==='fill'?'whole':ZM==='whole'?'close':'fill');
+ // Map gestures: one finger (or mouse) drags the map, two fingers pinch-zoom it, Ctrl + wheel
+ // (or a trackpad pinch) zooms at the pointer. A drag never counts as a tap on a route.
+ {const w=$('mapWrap'),pts=new Map();let pan=null,pin=null,moved=false;
+  const two=()=>{const[p,q]=[...pts.values()];return{d:Math.hypot(p.x-q.x,p.y-q.y)||1,mx:(p.x+q.x)/2,my:(p.y+q.y)/2}};
+  w.addEventListener('pointerdown',e=>{if(e.button>0)return;pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
+   if(pts.size===1){moved=false;pan={x:e.clientX,y:e.clientY,sl:w.scrollLeft,st:w.scrollTop};pin=null}
+   else if(pts.size===2){const t=two();pin={d:t.d,ms:MS,a:mapPoint(t.mx,t.my)};pan=null;moved=true}});
+  w.addEventListener('pointermove',e=>{if(!pts.has(e.pointerId))return;pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
+   if(pin&&pts.size>=2){const t=two();zoomAt(pin.ms*t.d/pin.d,pin.a[0],pin.a[1],t.mx,t.my)}
+   else if(pan){const dx=e.clientX-pan.x,dy=e.clientY-pan.y;if(!moved&&Math.hypot(dx,dy)>8){moved=true;try{w.setPointerCapture(e.pointerId)}catch(_){}}
+    if(moved){w.scrollLeft=pan.sl-dx;w.scrollTop=pan.st-dy}}});
+  const up=e=>{pts.delete(e.pointerId);if(pts.size===1&&pin){const[p]=[...pts.values()];pan={x:p.x,y:p.y,sl:w.scrollLeft,st:w.scrollTop};pin=null}if(!pts.size){pan=pin=null}};
+  w.addEventListener('pointerup',up);w.addEventListener('pointercancel',up);
+  w.addEventListener('click',e=>{if(moved){moved=false;e.stopPropagation();e.preventDefault()}},true);
+  w.addEventListener('wheel',e=>{if(!e.ctrlKey)return;e.preventDefault();const[ax,ay]=mapPoint(e.clientX,e.clientY);zoomAt(MS*Math.exp(-e.deltaY*.01),ax,ay,e.clientX,e.clientY)},{passive:false})}
 }else newGame(window.__NB||2);
 </script>
 </body>
