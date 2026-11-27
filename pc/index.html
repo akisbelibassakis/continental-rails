@@ -85,7 +85,12 @@ td:first-child,th:first-child{text-align:left}
 #scrim{position:fixed;inset:0;background:rgba(0,0,0,.45);opacity:0;pointer-events:none;transition:opacity .2s;z-index:40}
 #scrim.open{opacity:1;pointer-events:auto}
 #sheet{position:fixed;left:50%;top:50%;z-index:50;width:min(480px,92vw);background:var(--panel);border-radius:12px;padding:18px 20px;max-height:84vh;overflow:auto;transform:translate(-50%,-46%);opacity:0;pointer-events:none;transition:opacity .18s,transform .18s;box-shadow:0 12px 40px rgba(0,0,0,.35)}
-#sheet.open{transform:translate(-50%,-50%);opacity:1;pointer-events:auto}
+#sheet.open{transform:translate(calc(-50% + var(--dx,0px)),calc(-50% + var(--dy,0px)));opacity:1;pointer-events:auto}
+#sheet.drag{transition:none}
+#scrim.clear{background:transparent}
+.grip{position:sticky;top:-18px;margin:-18px -20px 4px;height:28px;display:flex;align-items:center;justify-content:center;cursor:grab;touch-action:none;background:var(--panel);z-index:1;border-radius:12px 12px 0 0}
+.grip span{width:46px;height:5px;border-radius:3px;background:var(--muted);opacity:.6}
+#sheet.drag .grip{cursor:grabbing}
 #sheet p{margin:6px 0}
 #sheet .x{float:right;width:34px;height:34px;margin:-6px -8px 4px 8px;border-radius:50%;border:1px solid var(--line);background:var(--bg);color:var(--ink);font:700 15px/1 inherit;cursor:pointer}
 #toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:90}
@@ -276,8 +281,12 @@ function gameOver(){G.over=true;const rs=G.players.map((p,i)=>({i,p,t:bestTicket
 
 // ---- UI
 function toast(m){if(AUTO)return;const t=$('toast');t.textContent=m;t.classList.add('open');clearTimeout(toast.h);toast.h=setTimeout(()=>t.classList.remove('open'),2200)}
-function sheet(html,onAct,onClose,lock){$('sheet').innerHTML=lock?html:'<button class="x" data-close aria-label="Close">✕</button>'+html+'<button class="btn wide" data-close>Back to game</button>';$('sheet').scrollTop=0;$('sheet').classList.add('open');$('scrim').classList.add('open');SH={onAct,onClose,lock}}
-function closeSheet(){$('sheet').classList.remove('open');$('scrim').classList.remove('open');const s=SH;SH=null;if(s&&s.onClose)s.onClose()}
+// Pop-up windows can be dragged by the bar at the top; the position is kept while
+// the window stays open (so redraws, e.g. ticking tickets, don't make it jump).
+let SDX=0,SDY=0;
+function placeSheet(){const s=$('sheet');s.style.setProperty('--dx',SDX+'px');s.style.setProperty('--dy',SDY+'px');$('scrim').classList.toggle('clear',!!(SDX||SDY))}
+function sheet(html,onAct,onClose,lock){$('sheet').innerHTML='<div class="grip" data-grip title="Drag to move this window"><span></span></div>'+(lock?html:'<button class="x" data-close aria-label="Close">✕</button>'+html+'<button class="btn wide" data-close>Back to game</button>');$('sheet').scrollTop=0;$('sheet').classList.add('open');$('scrim').classList.add('open');placeSheet();SH={onAct,onClose,lock}}
+function closeSheet(){$('sheet').classList.remove('open');$('scrim').classList.remove('open');SDX=SDY=0;placeSheet();const s=SH;SH=null;if(s&&s.onClose)s.onClose()}
 const swatch=c=>`<span class="sw${c==='L'?' loco':''}" style="background:${COL[c]||''}"></span>`;
 const fg=c=>c==='Y'||c==='W'?'#222':'#fff';
 function cardEl(c,attrs=''){return`<button class="card${c==='L'?' loco':''}" ${attrs} style="background:${COL[c]||''};color:${fg(c)}"><span class="ci">${c==='L'?LOCO:WAG}</span><span>${NAME[c]}</span></button>`}
@@ -323,7 +332,7 @@ function render(){if(AUTO||!G)return;const mt=myTurn();
  $('logList').innerHTML=G.log.slice(0,40).map(l=>`<p>${l}</p>`).join('')}
 
 function chooseTickets(list,min,done){const pick=new Set(list.map((_,i)=>i));
- const draw=()=>sheet(`<h3>Choose destination tickets</h3><p class="muted">Keep at least ${min}. Connect both cities to earn the points; unfinished tickets are subtracted at the end.</p>${list.map((t,i)=>`<button class="tk${pick.has(i)?' on':''}" data-a="t" data-i="${i}"><span>${pick.has(i)?'☑':'☐'} ${t.a} → ${t.b}</span><b>${t.v}</b></button>`).join('')}<button class="btn pri wide" data-a="ok" ${pick.size<min?'disabled':''}>Keep ${pick.size} ticket${pick.size===1?'':'s'}</button>`,
+ const draw=()=>sheet(`<h3>Choose destination tickets</h3><p class="muted">Keep at least ${min}. Connect both cities to earn the points; unfinished tickets are subtracted at the end. Tap a ticket to see its cities on the map; drag the bar at the top to move this window.</p>${list.map((t,i)=>`<button class="tk${pick.has(i)?' on':''}" data-a="t" data-i="${i}"><span>${pick.has(i)?'☑':'☐'} ${t.a} → ${t.b}</span><b>${t.v}</b></button>`).join('')}<button class="btn pri wide" data-a="ok" ${pick.size<min?'disabled':''}>Keep ${pick.size} ticket${pick.size===1?'':'s'}</button>`,
   (a,el)=>{if(a==='t'){const i=+el.dataset.i;pick.has(i)?pick.delete(i):pick.add(i);G.hl=[list[i].a,list[i].b];render();draw()}
    else if(a==='ok'&&pick.size>=min){closeSheet();const keep=list.filter((_,i)=>pick.has(i));me().tickets.push(...keep);G.tdeck.push(...list.filter((_,i)=>!pick.has(i)));G.hl=null;done(keep)}},null,true);draw()}
 function askStart(){G.busy=true;render();chooseTickets(me().start,2,()=>{G.busy=false;log('You kept your tickets. Your move!');render()})}
@@ -384,6 +393,10 @@ if(!AUTO){
  $('newBtn').onclick=()=>{if(!G||G.over||confirm('Start a new game?')){closeSheet();showStart()}};
  $('sheet').onclick=e=>{if(e.target.closest('[data-close]'))return closeSheet();const b=e.target.closest('[data-a]');if(b&&SH&&SH.onAct&&!b.disabled)SH.onAct(b.dataset.a,b)};
  $('scrim').onclick=()=>{if(SH&&!SH.lock)closeSheet()};
+ {let d=null;const s=$('sheet');
+  s.addEventListener('pointerdown',e=>{if(!e.target.closest('[data-grip]'))return;d={x:e.clientX,y:e.clientY,dx:SDX,dy:SDY,r:s.getBoundingClientRect()};s.classList.add('drag');s.setPointerCapture(e.pointerId);e.preventDefault()});
+  s.addEventListener('pointermove',e=>{if(!d)return;const r=d.r,mx=Math.max(80-r.right,Math.min(innerWidth-80-r.left,e.clientX-d.x)),my=Math.max(-r.top,Math.min(innerHeight-40-r.top,e.clientY-d.y));SDX=d.dx+mx;SDY=d.dy+my;placeSheet()});
+  const up=()=>{if(d){d=null;s.classList.remove('drag')}};s.addEventListener('pointerup',up);s.addEventListener('pointercancel',up)}
  $('map').onclick=e=>{if(!G)return;const c=e.target.closest('[data-c]');if(c&&G.mode==='station'&&myTurn())return onCity(c.dataset.c);const r=e.target.closest('[data-r]');if(r&&G.mode!=='station')onRoute(+r.dataset.r)};
  $('market').onclick=e=>{const b=e.target.closest('[data-f]');if(!b||b.disabled||!myTurn())return;let c;
   if(b.dataset.f==='d'){c=takeDeck(0);if(!c)return;toast(`You drew ${NAME[c]}.`)}else{const i=+b.dataset.f;if(G.face[i]==='L'&&G.draws)return;c=takeFace(0,i)}
