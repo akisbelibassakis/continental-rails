@@ -41,7 +41,7 @@ h3{font-size:20px;margin-bottom:6px}
 .lnk{background:none;border:0;color:var(--accent);font:inherit;font-weight:700;text-decoration:underline;padding:0;cursor:pointer}
 #mapWrap{flex:1;min-height:0;overflow:auto;background:var(--map);overscroll-behavior:contain}
 #map{width:max-content;min-width:100%}
-#map svg{display:block;width:var(--mw,100%);height:var(--mh,100%)}
+#map svg{display:block;width:var(--mw,100%);height:var(--mh,100%);overflow:visible}
 #map text{font-size:8.5px;font-weight:700;fill:var(--ink);paint-order:stroke;stroke:var(--land);stroke-width:2.6px;stroke-linejoin:round;pointer-events:none}
 #map [data-r]{cursor:pointer}
 #map .city{pointer-events:none}
@@ -298,13 +298,18 @@ let SDX=0,SDY=0;
 function placeSheet(){const s=$('sheet');s.style.setProperty('--dx',SDX+'px');s.style.setProperty('--dy',SDY+'px');$('scrim').classList.toggle('clear',!!(SDX||SDY))}
 function sheet(html,onAct,onClose,lock,see){$('sheet').innerHTML='<div class="grip" data-grip title="Drag to move this window"><span></span></div>'+(lock?html:'<button class="x" data-close aria-label="Close">✕</button>'+html+'<button class="btn wide" data-close>Back to game</button>');$('sheet').scrollTop=0;$('sheet').classList.add('open');$('scrim').classList.add('open');$('scrim').classList.toggle('see',!!see);placeSheet();SH={onAct,onClose,lock};
  // While you can look at the map behind the window, give it room to scroll clear of the window.
- $('map').style.paddingBottom=see&&!matchMedia('(orientation:landscape)').matches?$('sheet').offsetHeight+'px':''}
+ padMap(see)}
+// Just enough room below the map to scroll the southernmost cities above the window.
+// The SVG draws past its edges (overflow: visible), so that room shows real sea and coast.
+function padMap(on){const m=$('map');m.style.paddingBottom='';if(!on||matchMedia('(orientation:landscape)').matches)return;
+ const w=$('mapWrap'),H=w.clientHeight,visH=innerHeight-$('sheet').offsetHeight-w.getBoundingClientRect().top,oy=ZM==='whole'?(H-404*MS)/2:0,mapH=ZM==='whole'?H:404*MS;
+ const pad=Math.ceil(oy+392*MS+30-visH-(mapH-H));if(pad>0)m.style.paddingBottom=pad+'px'}
 function closeSheet(){$('sheet').classList.remove('open');$('scrim').classList.remove('open','see');$('map').style.paddingBottom='';SDX=SDY=0;placeSheet();const s=SH;SH=null;if(s&&s.onClose)s.onClose()}
 const swatch=c=>`<span class="sw${c==='L'?' loco':''}" style="background:${COL[c]||''}"></span>`;
 const fg=c=>c==='Y'||c==='W'?'#222':'#fff';
 function cardEl(c,attrs=''){return`<button class="card${c==='L'?' loco':''}" ${attrs} style="background:${COL[c]||''};color:${fg(c)}">${c==='L'?'★':NAME[c][0]}</button>`}
 
-function svg(){let s='<svg viewBox="-14 -8 428 404" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Rail map of Europe"><rect x="-170" y="-150" width="750" height="710" fill="var(--map)"/><path d="'+LANDP+'" fill="var(--land)" stroke="var(--coast)" stroke-width=".8" stroke-linejoin="round"/><path d="'+BORD+'" fill="none" stroke="var(--bord)" stroke-width=".6" stroke-dasharray="2.5 1.5" stroke-linejoin="round"/>';
+function svg(){let s='<svg viewBox="-14 -8 428 404" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Rail map of Europe"><rect x="-800" y="-800" width="2000" height="2000" fill="var(--map)"/><path d="'+LANDP+'" fill="var(--land)" stroke="var(--coast)" stroke-width=".8" stroke-linejoin="round"/><path d="'+BORD+'" fill="none" stroke="var(--bord)" stroke-width=".6" stroke-dasharray="2.5 1.5" stroke-linejoin="round"/>';
  for(const r of G.routes){const[x1,y1]=CITIES[r.a],[x2,y2]=CITIES[r.b],d=Math.hypot(x2-x1,y2-y1),ux=(x2-x1)/d,uy=(y2-y1)/d,o=7.5,ax=x1+ux*o,ay=y1+uy*o,seg=(d-2*o)/r.len;
   const L=`x1="${ax.toFixed(1)}" y1="${ay.toFixed(1)}" x2="${(x2-ux*o).toFixed(1)}" y2="${(y2-uy*o).toFixed(1)}"`,da=`stroke-dasharray="${(seg-2).toFixed(1)} 2"`,own=r.owner>=0;
   let g=`<g data-r="${r.id}"${G.last===r.id?' class="flash"':''}>`;
