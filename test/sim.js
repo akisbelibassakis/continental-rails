@@ -66,7 +66,7 @@ function check(G, nb) {
   for (const ed of editions) for (const map of ['classic', 'full']) {
     const html = fs.readFileSync(path.join(__dirname, '..', ed, 'index.html'), 'utf8');
     const src = html.match(/<script>([\s\S]*?)<\/script>/)[1];
-    for (const nb of [1, 2, 3]) {
+    for (const nb of [1, 2, 3, 4]) {
       let ok = 0, bad = 0, turnsLog = 0;
       for (let g = 0; g < N; g++) {
         const { G, errors } = await runGame(src, nb, map);

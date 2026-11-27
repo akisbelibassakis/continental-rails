@@ -32,7 +32,7 @@ Hosted on GitHub Pages from `main`, root: https://akisbelibassakis.github.io/con
 
 ### Current state vs. the planned feature set
 Two maps, chosen on the start screen (remembered in localStorage `cr-map`):
-- **Classic**: 29 cities, routes 1–6, 30/27/24 trains for 2/3/4 players, no long tickets.
+- **Classic**: 29 cities, routes 1–6, 30/27/24/20 trains for 2/3/4/5 players, no long tickets.
 - **Grand Europe**: 45 cities, an original route network (108 routes, double routes,
   routes up to 8), 45 trains each, 40 normal tickets plus 6 long tickets (★); each player
   is dealt 1 long + 3 normal and keeps ≥2. Rules follow the board game's rules; the map
@@ -54,6 +54,9 @@ Not yet: minimisable floating windows.
 - Grand Europe's city positions are the real coordinates projected (equirectangular,
   cos 48°, 19.5 units/degree) with a few nudges; route lengths = round((distance − 15)/18).
 - `G` holds the whole game state; `render()` redraws everything from it.
+- Route look: empty routes are flat, slightly soft painted spaces; a claimed route is drawn as
+  train cars (one per space) in the owner's colour, raised with a shadow, outlined in `--car`
+  (dark in light mode, light in dark mode) with a white window stripe.
 - Tickets are generated from city pairs whose shortest route costs 5–12.
 - Rules implemented:
   - Draw 2 cards; a face-up Loco counts as the whole draw.
@@ -67,7 +70,7 @@ Not yet: minimisable floating windows.
   - Final round when anyone has ≤2 trains.
   - Longest continuous route: +10.
   - Tickets: keep ≥2 at start (Grand Europe deals one long ticket extra), ≥1 later.
-- 1–3 computer opponents (`botTurn`). Their moves play out step by step, with a
+- 2–5 players: you plus 1–4 computer opponents (`botTurn`; Ada, Brunel, Cugnot, Diesel). Their moves play out step by step, with a
   Speed up option. They build stations only when a ticket is blocked.
 - UI: tutorial, Hint button, final-round pop-up, news ticker (rivals' moves, Final round
   tag), ☰ menu with How to play / Game log / Full screen (hidden when installed) / New game.
@@ -77,7 +80,7 @@ Not yet: minimisable floating windows.
 
 ## Testing
 - `window.__AUTO = true` makes every player a bot and plays a full game with no DOM
-  rendering; `window.__NB` sets the number of opponents (1–3), `window.__MAP` the map.
+  rendering; `window.__NB` sets the number of opponents (1–4), `window.__MAP` the map.
 - `node test/sim.js [games]` runs that for both maps and each player count, then
   checks: no script errors, game finishes, trains = start − claimed lengths, route
   score matches `PTS`, 110 cards in total, ≤3 stations, no two stations in one city,
