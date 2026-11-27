@@ -22,7 +22,7 @@ name, map layout, routes, colours and artwork are all original.
 | Path | What |
 |---|---|
 | `index.html` | Start page linking the editions; installable as one app (root `manifest.webmanifest` + `sw.js`, scope covers both editions) |
-| `phone/index.html` | Upright phone edition (29 cities, compact map, Zoom toggle) |
+| `phone/index.html` | Upright phone edition (29 cities). Map-first layout: thin score strip + ☰ menu on top, map fills the middle (Zoom: fill / all / close, drag to pan), news ticker under the map, cards/hand/buttons tray at the bottom |
 | `pc/index.html` | PC / phone-sideways edition (29 cities, board-game look) |
 | `*/manifest.webmanifest` | PWA manifest per edition (`display: fullscreen`, own orientation) |
 | `*/sw.js` | Network-first service worker, so updates appear automatically |
@@ -40,6 +40,10 @@ long tickets, pinch/wheel zoom with + / − / fit buttons, or draggable/minimisa
 floating windows. If the newer files turn up, replace `phone/` and `pc/` and add `full/`.
 
 ## How the game code works
+- The background map (`LANDP` coastline, `BORD` borders) is Natural Earth 1:50m data
+  (public domain), warped once so each city sits at its real place: an affine fit plus
+  a Gaussian RBF (σ = 4°) on the city positions, then simplified. If cities move or new
+  ones are added, the paths must be regenerated with the same method.
 - Constants at the top of the script: `CITIES` (name → [x, y] in the SVG viewBox),
   `ROUTES` (pipe-separated `CityA CityB length colour [T|F<n>]`; `X` = grey,
   `T` = tunnel, `F2` = ferry needing 2 Locos), `PTS` (score by length), `TUT` (tutorial steps).
