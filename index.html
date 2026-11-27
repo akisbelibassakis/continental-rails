@@ -123,6 +123,14 @@ td:first-child,th:first-child{text-align:left}
 #tixPanel .lbl{margin:2px 0 0}
 #tixPanel .tk{padding:8px 10px;margin-top:5px}
 #tixPanel .tk b{font-size:15px}
+/* Upright + Zoom: all: the map area hugs the game area; the ticket list uses the rest */
+#app.fitmap #mapWrap{flex:0 1 auto;height:calc(100vw * 404 / 428)}
+#app.fitmap #tixPanel{display:block;flex:1 1 0}
+/* compact ticket choice, so it covers less of the map */
+.tsel h3{font-size:18px;margin:0 0 2px}
+.tsel p{font-size:13px;margin:2px 0 4px!important}
+.tsel .tk{padding:8px 11px;margin-top:5px}
+.tsel .wide{margin-top:7px}
 /* Sideways phone, tablet or desktop: the map fills the left, everything else sits in a side panel */
 @media (orientation:landscape){
  :root{--side:clamp(272px,30vw,380px)}
@@ -357,7 +365,7 @@ function ticker(mt){let tag,col='var(--accent)',txt,btn='';
 // Map zoom. fill: the map covers the whole map area (drag to see the rest);
 // whole: all of it fits; close: twice fill. MS = screen pixels per map unit.
 let ZM=null,MS=1;try{ZM=localStorage.getItem('cr-zoom')}catch(e){}
-function sizeMap(){const w=$('mapWrap'),W=w.clientWidth,H=w.clientHeight;if(!W||!H)return;const a=W/428,b=H/404;let mw=W,mh=H;
+function sizeMap(){$('app').classList.toggle('fitmap',ZM==='whole'&&!matchMedia('(orientation:landscape)').matches);const w=$('mapWrap'),W=w.clientWidth,H=w.clientHeight;if(!W||!H)return;const a=W/428,b=H/404;let mw=W,mh=H;
  if(ZM==='whole')MS=Math.min(a,b);else{MS=Math.max(a,b)*(ZM==='close'?2:1);mw=428*MS;mh=404*MS}
  mh+=EXT*MS;
  w.style.setProperty('--mw',mw+'px');w.style.setProperty('--mh',mh+'px')}
@@ -369,7 +377,7 @@ function focusCities(ns){if(!ns||ZM==='whole')return;const w=$('mapWrap'),r=w.ge
  const cx=(Math.min(...xs)+Math.max(...xs))/2,cy=(Math.min(...ys)+Math.max(...ys))/2;
  w.scrollTo({left:(cx+14)*MS-w.clientWidth/2,top:(cy+8)*MS-visH/2,behavior:'smooth'})}
 function chooseTickets(list,min,done){const pick=new Set(list.map((_,i)=>i));
- const draw=()=>sheet(`<h3>Choose destination tickets</h3><p class="muted">Keep at least ${min}. Link both cities to earn the points; unfinished ones count against you. Tap a ticket to find it on the map.</p>${list.map((t,i)=>`<button class="tk${pick.has(i)?' on':''}" data-a="t" data-i="${i}"><span>${pick.has(i)?'☑':'☐'} ${t.a} → ${t.b}</span><b>${t.v}</b></button>`).join('')}<button class="btn pri wide" data-a="ok" ${pick.size<min?'disabled':''}>Keep ${pick.size} ticket${pick.size===1?'':'s'}</button>`,
+ const draw=()=>sheet(`<div class="tsel"><h3>Choose destination tickets</h3><p class="muted">Keep at least ${min}. Unfinished ones count against you. Tap one to find it on the map.</p>${list.map((t,i)=>`<button class="tk${pick.has(i)?' on':''}" data-a="t" data-i="${i}"><span>${pick.has(i)?'☑':'☐'} ${t.a} → ${t.b}</span><b>${t.v}</b></button>`).join('')}<button class="btn pri wide" data-a="ok" ${pick.size<min?'disabled':''}>Keep ${pick.size} ticket${pick.size===1?'':'s'}</button></div>`,
   (a,el)=>{if(a==='t'){const i=+el.dataset.i;pick.has(i)?pick.delete(i):pick.add(i);G.hl=[list[i].a,list[i].b];render();draw();focusCities(G.hl)}
    else if(a==='ok'&&pick.size>=min){closeSheet();const keep=list.filter((_,i)=>pick.has(i));me().tickets.push(...keep);G.tdeck.push(...list.filter((_,i)=>!pick.has(i)));G.hl=null;done(keep)}},null,true,true);draw()}
 function askStart(){G.busy=true;render();chooseTickets(me().start,2,()=>{G.busy=false;log('You kept your tickets. Your move!');render()})}
