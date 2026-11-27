@@ -5,7 +5,8 @@ const fs = require('fs'), path = require('path'), vm = require('vm');
 const N = +process.argv[2] || 100;
 // Node < 12 lacks Object.fromEntries (all current browsers have it).
 const POLYFILL = 'if(!Object.fromEntries)Object.fromEntries=e=>{const o={};for(const[k,v]of e)o[k]=v;return o};\n';
-const editions = ['phone', 'pc'].filter(e => fs.existsSync(path.join(__dirname, '..', e, 'index.html')));
+// One game file for every screen (the old phone/ and pc/ folders only redirect).
+const editions = ['.'];
 const PTS = { 1: 1, 2: 2, 3: 4, 4: 7, 5: 10, 6: 15, 7: 18, 8: 21 };
 let failures = 0;
 
@@ -65,10 +66,10 @@ function check(G, nb) {
       for (let g = 0; g < N; g++) {
         const { G, errors } = await runGame(src, nb);
         const issues = errors.concat(G ? check(G, nb) : ['no game state']);
-        if (issues.length) { bad++; failures++; if (bad <= 3) console.log(`  [${ed} ${nb + 1}p game ${g}] ${issues.join('; ')}`); }
+        if (issues.length) { bad++; failures++; if (bad <= 3) console.log(`  [${ed === '.' ? 'game' : ed} ${nb + 1}p game ${g}] ${issues.join('; ')}`); }
         else { ok++; turnsLog += G.log.length; }
       }
-      console.log(`${ed.padEnd(6)} ${nb + 1} players: ${ok}/${N} games clean${bad ? `, ${bad} with problems` : ''}`);
+      console.log(`${(ed === '.' ? 'game' : ed).padEnd(6)} ${nb + 1} players: ${ok}/${N} games clean${bad ? `, ${bad} with problems` : ''}`);
     }
   }
   console.log(failures ? `FAILED: ${failures} game(s) with problems` : 'ALL CLEAN');
