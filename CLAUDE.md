@@ -31,31 +31,42 @@ name, map layout, routes, colours and artwork are all original.
 Hosted on GitHub Pages from `main`, root: https://akisbelibassakis.github.io/continental-rails/
 
 ### Current state vs. the planned feature set
-The repo was started (2026-11-27) from the two single-file versions that existed
-locally. Compared with the later chat version, the game does **not** yet have: the full
-47-city map, double routes, 7- and 8-train routes (scoring 18/21),
-long tickets, or minimisable floating windows. If the newer files turn up, fold their features into the single `index.html` (e.g. a map choice on the start screen).
+Two maps, chosen on the start screen (remembered in localStorage `cr-map`):
+- **Classic**: 29 cities, routes 1–6, 30/27/24 trains for 2/3/4 players, no long tickets.
+- **Grand Europe**: 45 cities, an original route network (108 routes, double routes,
+  routes up to 8), 45 trains each, 40 normal tickets plus 6 long tickets (★); each player
+  is dealt 1 long + 3 normal and keeps ≥2. Rules follow the board game's rules; the map
+  and route network must stay our own design (see the first standing rule).
+Not yet: minimisable floating windows.
 
 ## How the game code works
 - The background map (`LANDP` coastline, `BORD` borders) is Natural Earth 1:50m data
   (public domain), warped once so each city sits at its real place: an affine fit plus
   a Gaussian RBF (σ = 4°) on the city positions, then simplified. If cities move or new
   ones are added, the paths must be regenerated with the same method.
-- Constants at the top of the script: `CITIES` (name → [x, y] in the SVG viewBox),
-  `ROUTES` (pipe-separated `CityA CityB length colour [T|F<n>]`; `X` = grey,
-  `T` = tunnel, `F2` = ferry needing 2 Locos), `PTS` (score by length), `TUT` (tutorial steps).
+- `MAP_SRC` holds both maps: `cities` (name → [x, y] in the map's `vb` viewBox), `routes`
+  (pipe-separated `CityA CityB length colour [T|F<n>]`; `X` = grey,
+  `T` = tunnel, `F2` = ferry needing 2 Locos; two entries between the same cities = a double
+  route), `trains`, ticket cost range `tix`, `deck` size and number of `longs`. `useMap(k)`
+  parses a map once (pairs doubles, builds the ticket pool and long tickets = costliest
+  trips with no shared city) and sets `MAP`, `CITIES`, `ROUTES`, `VB`. `PTS` (score by
+  length 1–8), `TUT` (tutorial steps).
+- Grand Europe's city positions are the real coordinates projected (equirectangular,
+  cos 48°, 19.5 units/degree) with a few nudges; route lengths = round((distance − 15)/18).
 - `G` holds the whole game state; `render()` redraws everything from it.
 - Tickets are generated from city pairs whose shortest route costs 5–12.
 - Rules implemented:
   - Draw 2 cards; a face-up Loco counts as the whole draw.
   - 3 face-up Locos reshuffle the face-up row.
-  - Claim routes; scoring 1/2/4/7/10/15 for lengths 1–6.
+  - Claim routes; scoring 1/2/4/7/10/15/18/21 for lengths 1–8.
+  - Double routes: with 2–3 players only one track can be used (`closed`); nobody may own
+    both tracks. `free(r, pi)` is the single check used by players, bots and path finding.
   - Tunnels: reveal 3 cards, pay one extra for each match (colour or Loco).
   - Ferries need that many Locos.
   - Stations: cost 1/2/3 cards, borrow one rival route at the end, +4 each if unused.
   - Final round when anyone has ≤2 trains.
   - Longest continuous route: +10.
-  - Tickets: keep ≥2 at start, ≥1 later.
+  - Tickets: keep ≥2 at start (Grand Europe deals one long ticket extra), ≥1 later.
 - 1–3 computer opponents (`botTurn`). Their moves play out step by step, with a
   Speed up option. They build stations only when a ticket is blocked.
 - UI: tutorial, Hint button, final-round pop-up, news ticker (rivals' moves, Final round
@@ -66,11 +77,11 @@ long tickets, or minimisable floating windows. If the newer files turn up, fold 
 
 ## Testing
 - `window.__AUTO = true` makes every player a bot and plays a full game with no DOM
-  rendering; `window.__NB` sets the number of opponents (1–3).
-- `node test/sim.js [games]` runs that for each player count, then
+  rendering; `window.__NB` sets the number of opponents (1–3), `window.__MAP` the map.
+- `node test/sim.js [games]` runs that for both maps and each player count, then
   checks: no script errors, game finishes, trains = start − claimed lengths, route
   score matches `PTS`, 110 cards in total, ≤3 stations, no two stations in one city,
-  ≥2 tickets kept. The harness polyfills `Object.fromEntries` for old Node versions.
+  ≥2 tickets kept, double-route rule respected. The harness polyfills `Object.fromEntries` for old Node versions.
 - For screenshots use the browser preview (or Playwright).
 
 ## Later (only when asked)
