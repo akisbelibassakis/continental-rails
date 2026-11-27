@@ -21,7 +21,7 @@ name, map layout, routes, colours and artwork are all original.
 ## Layout
 | Path | What |
 |---|---|
-| `index.html` | Start page linking the editions |
+| `index.html` | Start page linking the editions; installable as one app (root `manifest.webmanifest` + `sw.js`, scope covers both editions) |
 | `phone/index.html` | Upright phone edition (29 cities, compact map, Zoom toggle) |
 | `pc/index.html` | PC / phone-sideways edition (29 cities, board-game look) |
 | `*/manifest.webmanifest` | PWA manifest per edition (`display: fullscreen`, own orientation) |
