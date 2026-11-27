@@ -6,7 +6,9 @@
 <title>Continental Rails</title>
 <meta name="description" content="A railway board game across Europe against computer rivals.">
 <meta name="theme-color" content="#2b211a">
+<link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@600;700&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
 <style>
 :root{--bg:#2b211a;--ink:#f1e3c4;--muted:#d8c8a6;--gold:#c9952e;--accent:#a3361f}
@@ -30,5 +32,6 @@ a.ed span{color:var(--muted);font-size:14px}
 <a class="ed" href="phone/"><b>Phone edition</b><span>Upright phone, compact map with zoom. 29 cities.</span></a>
 <a class="ed" href="pc/"><b>PC edition</b><span>Desktop or phone held sideways, board-game look. 29 cities.</span></a>
 </main>
+<script>if('serviceWorker' in navigator&&location.protocol!=='file:')navigator.serviceWorker.register('sw.js').catch(()=>{});</script>
 </body>
 </html>
